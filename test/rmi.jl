@@ -1,49 +1,54 @@
-module RMI
+using ForwardDiff
+using Gridap
+using GridapODEs.ODETools
+using GridapODEs.TransientFETools
+
+f(t) = 1.0
+
+u₀(x) = 0.0
+
+domain = (0,1)
+cells = (10,)
+model = CartesianDiscreteModel(domain, cells)
+
+δ = DiracDelta{0}(model, tags=1)
+
+order = 2
+V = TestFESpace(model,
+		ReferenceFE(lagrangian, Float64, order),
+		conformity=:H1)
+U = TransientTrialFESpace(V)
+
+degree = 2 * order
+Ω = Triangulation(model)
+dΩ = Measure(Ω, degree)
+
+a(u,v) = ∫(∇(v)⋅∇(u))dΩ
+b(v,t) = δ(f(t)*v)
+
+res(t,u,v) = a(u,v) + ∫(∂t(u)*v)dΩ - b(v,t)
+jac(t,u,du,v) = a(du,v)
+jac_t(t,u,dut,v) = ∫(dut*v)dΩ
+
+op = TransientFEOperator(res, jac, jac_t, U, V)
+
+t₀ = 0.0
+t₁ = 1.0
+δt = 0.1
+
+U₀ = U(0.0)
+uh₀ = interpolate_everywhere(u₀, U₀)
+
+ls = LUSolver()
+θ = 1.0
+ode_solver = ThetaMethod(ls, δt, θ)
+
+sol_t = solve(ode_solver, op, uh₀, t₀, t₁)
 
 using Plots
-using ModelingToolkit
-using DomainSets
-using DiffEqOperators
-using OrdinaryDiffEq
-
-@variables t x
-@variables u(..)
-@parameters β
-Dt = Differential(t)
-Dx = Differential(x)
-Dxx = Differential(x)^2
-
-# van Genuchten model
-# S(t,x) = (1 + (-α*u(t,x))^n)^(-m)
-# K(t,x) = Ks * S(t,x)^l * (1 - (1 - S(t,x)^(1/m))^m)^2
-K(t,x) = β * u(t,x)
-
-# Parameters
-α = 14.5
-Ks = 0.297
-m = 0.63
-n = 1 / (1-m)
-l = 1/2
-
-# Richards equation
-# eqs = [ Dt(S(t,x)) ~ Dx( K(t,x) * Dx(u(t,x)) ) + Dx(K(t,x)) ]
-eqs = [ Dt(u(t,x)) ~ Dxx(u(t,x)) + Dx(K(t,x)) ]
-bcs = [ u(0,x) ~ -1.0,
-        u(t,0) ~ 0.0,
-	Dx(u(t,1)) ~ 0.0 ]
-
-domains = [ t ∈ Interval(0.0, 1.0),
-	    x ∈ Interval(0.0, 1.0) ]
-
-@named pdesys = PDESystem(eqs, bcs, domains, [t,x], [u(t,x)], [β => 1.0])
-
-dx = 0.1
-discretization = MOLFiniteDifference([x => dx], t)
-
-prob = discretize(pdesys, discretization)
-
-sol = solve(prob, Tsit5(), saveat=0.1)
-
-plot(sol[end])
-
+using Printf
+plt = plot()
+for (uh_tn, tn) in sol_t
+	plot!(plt, uh_tn.free_values[1:9], label = @sprintf "t = %1.1f" tn)
 end
+plot(plt)
