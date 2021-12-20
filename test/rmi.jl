@@ -1,21 +1,19 @@
-using ForwardDiff
 using Gridap
 using GridapODEs.ODETools
 using GridapODEs.TransientFETools
 
-Ks = 0.001
-α = 0.01
+Ks = 1.0
 m = 0.5
+α = 1/2 + 1/m
 θs = 0.5
 θr = 0.1
-
-e = VectorValue(1.0)
 
 u(x,t) = θs
 u(t) = x -> u(x,t)
 f(t) = x -> ∂t(u)(x,t) - D(u(t,x))*Δ(u(t))(x)
-D(u) = (1-m)*Ks/(α*m)/(θs-θr) * u^(1/2-1/m) * ((1-u^(1/m))^m + (1-u^(1/m))^(-m) - 2)
-K(u) = Ks * u^(1/2) * (1 - (1 - u^(1/m))^m)^2
+η(u) = (u-θr)/(θs-θr)
+D(u) = (1-m)*Ks/(α*m)/(θs-θr) * η(u)^(1/2-1/m) * ((1-η(u)^(1/m))^m + (1-η(u)^(1/m))^(-m) - 2)
+K(u) = Ks * η(u)^(1/2) * (1 - (1 - η(u)^(1/m))^m)^2
 
 domain = (0,1)
 cells = (100,)
