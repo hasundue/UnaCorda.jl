@@ -13,12 +13,12 @@ e = VectorValue(1.0)
 
 u(x,t) = θs
 u(t) = x -> u(x,t)
-f(t) = x -> ∂t(u)(x,t) - D(u(t,x))*Δ(u(t))(x) - K(u(t,x))*∇(u(t))(x)⋅e
+f(t) = x -> ∂t(u)(x,t) - D(u(t,x))*Δ(u(t))(x)
 D(u) = (1-m)*Ks/(α*m)/(θs-θr) * u^(1/2-1/m) * ((1-u^(1/m))^m + (1-u^(1/m))^(-m) - 2)
 K(u) = Ks * u^(1/2) * (1 - (1 - u^(1/m))^m)^2
 
 domain = (0,1)
-cells = (10,)
+cells = (100,)
 model = CartesianDiscreteModel(domain, cells)
 
 order = 1
@@ -32,7 +32,7 @@ degree = 2 * order
 Ω = Triangulation(model)
 dΩ = Measure(Ω, degree)
 
-a(u,v) = ∫((D∘u)*∇(u)⋅∇(v))dΩ + ∫((e⊙(K∘u))⋅∇(v))dΩ
+a(u,v) = ∫((D∘u)*∇(u)⋅∇(v))dΩ
 b(v,t) = ∫(v⋅f(t))dΩ
 
 res(t,u,v) = a(u,v) + ∫(∂t(u)*v)dΩ - b(v,t)
@@ -58,6 +58,6 @@ using Plots
 using Printf
 plt = plot()
 for (uh_tn, tn) in sol_t
-	plot!(plt, uh_tn.free_values[1:10], label = @sprintf "t = %1.1f" tn)
+	plot!(plt, uh_tn.free_values[1:100], label = @sprintf "t = %1.1f" tn)
 end
 plot(plt)
