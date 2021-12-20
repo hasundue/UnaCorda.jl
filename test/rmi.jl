@@ -3,11 +3,19 @@ using Gridap
 using GridapODEs.ODETools
 using GridapODEs.TransientFETools
 
+Ks = 0.001
+α = 0.01
+m = 0.5
+θs = 0.5
+θr = 0.1
+
 e = VectorValue(1.0)
 
-u(x,t) = 1.0
+u(x,t) = θs
 u(t) = x -> u(x,t)
-f(t) = x -> ∂t(u)(x,t) - Δ(u(t))(x) - e⋅∇(u(t))(x)
+f(t) = x -> ∂t(u)(x,t) - D(u(t,x))*Δ(u(t))(x) - K(u(t,x))*∇(u(t))(x)⋅e
+D(u) = (1-m)*Ks/(α*m)/(θs-θr) * u^(1/2-1/m) * ((1-u^(1/m))^m + (1-u^(1/m))^(-m) - 2)
+K(u) = Ks * u^(1/2) * (1 - (1 - u^(1/m))^m)^2
 
 domain = (0,1)
 cells = (10,)
@@ -24,23 +32,26 @@ degree = 2 * order
 Ω = Triangulation(model)
 dΩ = Measure(Ω, degree)
 
-a(t,u,v) = ∫(∇(v)⋅∇(u))dΩ + ∫((e⊙u)⋅∇(v))dΩ
-b(t,v) = ∫(v⋅f(t))dΩ
-m(t,ut,v) = ∫(ut⋅v)dΩ
+a(u,v) = ∫((D∘u)*∇(u)⋅∇(v))dΩ + ∫((e⊙(K∘u))⋅∇(v))dΩ
+b(v,t) = ∫(v⋅f(t))dΩ
 
-op = TransientAffineFEOperator(m, a, b, U, V)
+res(t,u,v) = a(u,v) + ∫(∂t(u)*v)dΩ - b(v,t)
+jac(t,u,du,v) = a(du,v)
+jac_t(t,u,dut,v) = ∫(dut*v)dΩ
+
+op = TransientFEOperator(res, jac, jac_t, U, V)
 
 t₀ = 0.0
-t₁ = 1.0
-δt = 0.1
+t₁ = 10.0
+δt = 1.0
 
-u₀(x) = 0.0
+u₀(x) = θr
 U₀ = U(0.0)
 uh₀ = interpolate_everywhere(u₀, U₀)
 
-ls = LUSolver()
+nls = NLSolver()
 θ = 1.0
-ode_solver = ThetaMethod(ls, δt, θ)
+ode_solver = ThetaMethod(nls, δt, θ)
 
 sol_t = solve(ode_solver, op, uh₀, t₀, t₁)
 using Plots
