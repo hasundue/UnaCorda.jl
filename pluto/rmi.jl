@@ -48,9 +48,9 @@ order = 1
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
-	ReferenceFE(lagrangian, Float64, 1),
-	conformity=:H1,
-	dirichlet_tags=1)
+                ReferenceFE(lagrangian, Float64, 1),
+                conformity=:H1,
+                dirichlet_tags=1)
 
 # ╔═╡ 5fd05359-cc7a-4f38-8eaf-b42eff330400
 U = TransientTrialFESpace(V, u)
@@ -64,23 +64,29 @@ degree = 2 * order
 # ╔═╡ e8663da4-0c03-49eb-bd7d-494ca8a33b42
 dΩ = Measure(Ω, degree)
 
-# ╔═╡ 4bd0b0ba-c561-46c2-ac82-32cb70db00d9
-kr(u) = u^3
+# ╔═╡ f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
+kr(u) = 1
+
+# ╔═╡ 941f12aa-c73c-4d7c-9309-4f90b1b7f624
+p(u) = 1
 
 # ╔═╡ f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
-a(u,v) = ∫(∇(v)⊙((kr∘u)*(u*∇(u))))dΩ
+a(u,v) = ∫(∇(v)⊙((kr∘u)*((p∘u)*∇(u))))dΩ
 
-# ╔═╡ 6b449cc3-4c97-47b1-9b44-d5bc564fc622
+# ╔═╡ a440cf44-79f1-461d-8e0f-e5db5faafe14
 b(v,t) = ∫(v⋅f(t))dΩ
 
+# ╔═╡ 77a06bc6-7bd5-44b9-8e56-938cf7885498
+m(u,v) = ∫(v*u)dΩ
+
 # ╔═╡ f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
-res(t,u,v) = a(u,v) + ∫(∂t(u)*v)dΩ - b(v,t)
+res(t,u,v) = a(u,v) + m(∂t(u),v) - b(v,t)
 
 # ╔═╡ 5c082833-ba90-4062-8a26-9e819e348f30
 jac(t,u,du,v) = a(du,v)
 
 # ╔═╡ 2d6acb8e-59f3-4ac1-8018-bdd4c62f1d4c
-jac_t(t,u,dut,v) = ∫(dut*v)dΩ
+jac_t(t,u,dut,v) = m(dut,v)
 
 # ╔═╡ 21edb974-050a-49f7-a9b9-c8e0dbbbcf76
 op = TransientFEOperator(res, jac, jac_t, U, V)
@@ -1509,9 +1515,11 @@ version = "0.9.1+5"
 # ╠═3879fd7c-cdec-426e-9d7d-1816fbfc707a
 # ╠═4ee586f2-7bf9-421d-96d6-3d7a715dcf71
 # ╠═e8663da4-0c03-49eb-bd7d-494ca8a33b42
-# ╠═4bd0b0ba-c561-46c2-ac82-32cb70db00d9
+# ╠═f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
+# ╠═941f12aa-c73c-4d7c-9309-4f90b1b7f624
 # ╠═f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
-# ╠═6b449cc3-4c97-47b1-9b44-d5bc564fc622
+# ╠═a440cf44-79f1-461d-8e0f-e5db5faafe14
+# ╠═77a06bc6-7bd5-44b9-8e56-938cf7885498
 # ╠═f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
 # ╠═5c082833-ba90-4062-8a26-9e819e348f30
 # ╠═2d6acb8e-59f3-4ac1-8018-bdd4c62f1d4c
