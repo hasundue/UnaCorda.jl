@@ -45,9 +45,9 @@ order = 1
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
-		ReferenceFE(lagrangian, Float64, 1),
-		conformity=:H1,
-		dirichlet_tags=1)
+	ReferenceFE(lagrangian, Float64, 1),
+	conformity=:H1,
+	dirichlet_tags=1)
 
 # ╔═╡ 5fd05359-cc7a-4f38-8eaf-b42eff330400
 U = TransientTrialFESpace(V, u)
@@ -106,20 +106,18 @@ sol_t = solve(ode_solver, op, uh₀, t₀, t₁)
 # ╔═╡ 89face64-1b9e-4e73-b1ff-aec682de8b69
 @recipe function plot(Ω::Triangulation, sol_t::TransientFESolution)
     x = [ coord[1] for coord in Ω.model.grid.node_coords ]
-    N = length(x)
     ub = sol_t.trial.dirichlet_t(0.0, 0.0)
-    # Initial value
     @series begin
-	label --> "t = 0.0"
-	y = vcat([ub], sol_t.odesol.u0)
-	x, y
+        label --> "t = 0.0"
+        y = vcat([ub], sol_t.odesol.u0)
+        x, y
     end
     for (uh_tn, tn) in sol_t
-	y = vcat([ub], uh_tn.free_values[1:10])
-	@series begin
-	    label --> @sprintf "t = %1.1f" tn
-	    x, y
-	end
+        y = vcat([ub], uh_tn.free_values)
+        @series begin
+            label --> @sprintf "t = %1.1f" tn
+            x, y
+        end
     end
 end
 
