@@ -37,8 +37,11 @@ f(t) = x -> 0
 # ╔═╡ bb5dfa2f-a591-43bc-8324-78e940ba5d2e
 domain = (0,1)
 
-# ╔═╡ 79a44a02-f985-4a73-a45b-0d7c54c3f604
-cells = (10,)
+# ╔═╡ 4d9bb84b-eb69-4f11-ab2f-641044326e13
+N = 10
+
+# ╔═╡ 5892ebec-ae9e-42b2-9c42-3eec46668d0d
+cells = (N,)
 
 # ╔═╡ ec5f6934-7905-41e0-b0c0-a3dffd446302
 model = CartesianDiscreteModel(domain, cells)
@@ -48,12 +51,11 @@ order = 1
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
-                ReferenceFE(lagrangian, Float64, 1),
-                conformity=:H1,
-                dirichlet_tags=1)
+                ReferenceFE(lagrangian, Float64, order),
+                conformity=:L2)
 
 # ╔═╡ 5fd05359-cc7a-4f38-8eaf-b42eff330400
-U = TransientTrialFESpace(V, u)
+U = TransientTrialFESpace(V)
 
 # ╔═╡ 3879fd7c-cdec-426e-9d7d-1816fbfc707a
 degree = 2 * order
@@ -61,14 +63,32 @@ degree = 2 * order
 # ╔═╡ 4ee586f2-7bf9-421d-96d6-3d7a715dcf71
 Ω = Triangulation(model)
 
-# ╔═╡ e8663da4-0c03-49eb-bd7d-494ca8a33b42
+# ╔═╡ 7b537718-f46e-4c0b-950d-479c7cdb371b
 dΩ = Measure(Ω, degree)
 
+# ╔═╡ 3b4fcda1-0b40-4e37-9f48-2d501b39d49c
+Γ = BoundaryTriangulation(model, tags=1)
+
+# ╔═╡ 7dab1642-035c-4019-94d4-8bc83e342e74
+dΓ = Measure(Γ,degree)
+
+# ╔═╡ b6b761f8-2afd-4634-ac44-b9b1a01007fa
+nb = get_normal_vector(Γ)
+
+# ╔═╡ 76ba3420-e959-4ae2-8194-030b1297e2f7
+Λ = SkeletonTriangulation(model)
+
+# ╔═╡ 37e03d72-4fbb-4e3a-bb67-aa9d659419f4
+dΛ = Measure(Λ,degree)
+
+# ╔═╡ 4b5ed293-a3de-4537-ac86-c74f583e0a82
+ns = get_normal_vector(Λ)
+
 # ╔═╡ f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
-kr(u) = 1
+kr(u) = 1.0
 
 # ╔═╡ 941f12aa-c73c-4d7c-9309-4f90b1b7f624
-p(u) = 1
+p(u) = 1.0
 
 # ╔═╡ f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
 a(u,v) = ∫(∇(v)⊙((kr∘u)*((p∘u)*∇(u))))dΩ
@@ -76,14 +96,29 @@ a(u,v) = ∫(∇(v)⊙((kr∘u)*((p∘u)*∇(u))))dΩ
 # ╔═╡ a440cf44-79f1-461d-8e0f-e5db5faafe14
 b(v,t) = ∫(v⋅f(t))dΩ
 
-# ╔═╡ 77a06bc6-7bd5-44b9-8e56-938cf7885498
+# ╔═╡ ba9514db-e1c3-4793-8f18-7778f0fe4ebb
 m(u,v) = ∫(v*u)dΩ
 
+# ╔═╡ b8bc4ad9-e2d6-40be-aa7a-4f65c08f03e3
+h = 1.0 / N
+
+# ╔═╡ 179017b9-76a2-4de6-9a6a-e9247235a5b1
+γ = order*(order+1)
+
+# ╔═╡ 2aab0d4d-feaf-4600-bd3d-064de2ab72a6
+a_Γ(u,v) = ∫( (γ/h)*v*u - v*((kr∘u)*(p∘u)*∇(u)⋅nb) - ((kr∘v)*(p∘v)*∇(v)⋅nb)*u )dΓ
+
+# ╔═╡ a8099cca-b6c7-4ea4-9b8c-0a1020cc9a4f
+b_Γ(v,t) = ∫( (γ/h)*v*u(t) - (∇(v)⋅nb)*u(t) )dΓ
+
+# ╔═╡ 254d2a92-54b3-4250-a34c-96e71bbece8c
+a_Λ(u,v) = ∫( (γ/h)*jump(v*ns)⊙jump(u*ns) - jump(v*ns)⊙mean((kr∘u)*(p∘u)*∇(u)) - mean((kr∘v)*(p∘v)*∇(v))⊙jump(u*ns) )dΛ
+
 # ╔═╡ f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
-res(t,u,v) = a(u,v) + m(∂t(u),v) - b(v,t)
+res(t,u,v) = a(u,v) + m(∂t(u),v) + a_Γ(u,v) + a_Λ(u,v) - b(v,t) - b_Γ(v,t)
 
 # ╔═╡ 5c082833-ba90-4062-8a26-9e819e348f30
-jac(t,u,du,v) = a(du,v)
+jac(t,u,du,v) = a(du,v) + a_Γ(du,v) + a_Λ(du,v)
 
 # ╔═╡ 2d6acb8e-59f3-4ac1-8018-bdd4c62f1d4c
 jac_t(t,u,dut,v) = m(dut,v)
@@ -107,7 +142,7 @@ uh₀ = interpolate_everywhere(u₀, U₀)
 nls = NLSolver(method=:newton, linesearch=BackTracking())
 
 # ╔═╡ 210f6712-2f42-4e33-a7a6-122dc8eec00c
-θ = 1.0
+θ = 0.9
 
 # ╔═╡ 05658a02-1272-42e8-b9d0-2bdd0956571b
 ode_solver = ThetaMethod(nls, δt, θ)
@@ -117,24 +152,24 @@ sol_t = solve(ode_solver, op, uh₀, t₀, t₁)
 
 # ╔═╡ 89face64-1b9e-4e73-b1ff-aec682de8b69
 @recipe function plot(Ω::Triangulation, sol_t::TransientFESolution)
-    x = [ coord[1] for coord in Ω.model.grid.node_coords ]
-    ub = sol_t.trial.dirichlet_t(0.0, 0.0)
+    coords = [ coord[1] for coord in Ω.model.grid.node_coords ]
+    x = sort(vcat(coords, coords))[2:end-1]
     @series begin
         label --> "t = 0.0"
-        y = vcat([ub], sol_t.odesol.u0)
+        y = sol_t.odesol.u0
         x, y
     end
     for (uh_tn, tn) in sol_t
-        y = vcat([ub], uh_tn.free_values)
         @series begin
             label --> @sprintf "t = %1.1f" tn
+            y = uh_tn.free_values
             x, y
         end
     end
 end
 
 # ╔═╡ fe3298e9-52b3-4817-873d-dc277ffd6b6f
-plot(Ω, sol_t)
+plot(Ω, sol_t, xlims=(0,1))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1507,19 +1542,31 @@ version = "0.9.1+5"
 # ╠═1ffc636a-2bd2-46d4-8e1f-37d27a99a41f
 # ╠═f4ebfdd1-7e27-4eca-a72e-d95506bd1827
 # ╠═bb5dfa2f-a591-43bc-8324-78e940ba5d2e
-# ╠═79a44a02-f985-4a73-a45b-0d7c54c3f604
+# ╠═4d9bb84b-eb69-4f11-ab2f-641044326e13
+# ╠═5892ebec-ae9e-42b2-9c42-3eec46668d0d
 # ╠═ec5f6934-7905-41e0-b0c0-a3dffd446302
 # ╠═6a22693a-cb4c-4c77-8d07-9992c9ff7b8f
 # ╠═43654980-8897-4e62-9936-88d33d1c4c7e
 # ╠═5fd05359-cc7a-4f38-8eaf-b42eff330400
 # ╠═3879fd7c-cdec-426e-9d7d-1816fbfc707a
 # ╠═4ee586f2-7bf9-421d-96d6-3d7a715dcf71
-# ╠═e8663da4-0c03-49eb-bd7d-494ca8a33b42
+# ╠═7b537718-f46e-4c0b-950d-479c7cdb371b
+# ╠═3b4fcda1-0b40-4e37-9f48-2d501b39d49c
+# ╠═7dab1642-035c-4019-94d4-8bc83e342e74
+# ╠═b6b761f8-2afd-4634-ac44-b9b1a01007fa
+# ╠═76ba3420-e959-4ae2-8194-030b1297e2f7
+# ╠═37e03d72-4fbb-4e3a-bb67-aa9d659419f4
+# ╠═4b5ed293-a3de-4537-ac86-c74f583e0a82
 # ╠═f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
 # ╠═941f12aa-c73c-4d7c-9309-4f90b1b7f624
 # ╠═f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
 # ╠═a440cf44-79f1-461d-8e0f-e5db5faafe14
-# ╠═77a06bc6-7bd5-44b9-8e56-938cf7885498
+# ╠═ba9514db-e1c3-4793-8f18-7778f0fe4ebb
+# ╠═b8bc4ad9-e2d6-40be-aa7a-4f65c08f03e3
+# ╠═179017b9-76a2-4de6-9a6a-e9247235a5b1
+# ╠═2aab0d4d-feaf-4600-bd3d-064de2ab72a6
+# ╠═a8099cca-b6c7-4ea4-9b8c-0a1020cc9a4f
+# ╠═254d2a92-54b3-4250-a34c-96e71bbece8c
 # ╠═f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
 # ╠═5c082833-ba90-4062-8a26-9e819e348f30
 # ╠═2d6acb8e-59f3-4ac1-8018-bdd4c62f1d4c
