@@ -13,6 +13,9 @@ using GridapODEs.ODETools
 # ╔═╡ b8fa8fcc-6887-4ceb-8b62-7b8559a402a2
 using GridapODEs.TransientFETools
 
+# ╔═╡ b7457c20-23f7-4dff-936e-b083af5ed224
+using LineSearches: BackTracking
+
 # ╔═╡ f7276bb0-53cc-416a-b4fe-736934854050
 using Plots
 
@@ -29,7 +32,7 @@ u(x,t) = 1.0
 u(t) = x -> u(x,t)
 
 # ╔═╡ f4ebfdd1-7e27-4eca-a72e-d95506bd1827
-f(t) = x -> ∂t(u)(x,t) - Δ(u(t))(x)
+f(t) = x -> 0
 
 # ╔═╡ bb5dfa2f-a591-43bc-8324-78e940ba5d2e
 domain = (0,1)
@@ -61,8 +64,11 @@ degree = 2 * order
 # ╔═╡ e8663da4-0c03-49eb-bd7d-494ca8a33b42
 dΩ = Measure(Ω, degree)
 
-# ╔═╡ 862513ce-9003-47bd-aa3d-df9a5742f0ae
-a(u,v) = ∫(∇(u)⋅∇(v))dΩ
+# ╔═╡ 4bd0b0ba-c561-46c2-ac82-32cb70db00d9
+kr(u) = u^3
+
+# ╔═╡ f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
+a(u,v) = ∫(∇(v)⊙((kr∘u)*(u*∇(u))))dΩ
 
 # ╔═╡ 6b449cc3-4c97-47b1-9b44-d5bc564fc622
 b(v,t) = ∫(v⋅f(t))dΩ
@@ -91,8 +97,8 @@ U₀ = U(0.0)
 # ╔═╡ cb60a73d-f7b8-40bf-841c-9717ae8e1ce2
 uh₀ = interpolate_everywhere(u₀, U₀)
 
-# ╔═╡ 9587a578-44ff-4ca3-9f99-998ebbe00733
-nls = NLSolver()
+# ╔═╡ 68efb930-c224-49ad-a2e2-07ee8aa7ae7c
+nls = NLSolver(method=:newton, linesearch=BackTracking())
 
 # ╔═╡ 210f6712-2f42-4e33-a7a6-122dc8eec00c
 θ = 1.0
@@ -129,6 +135,8 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
 GridapODEs = "55e38337-5b6e-4c7c-9cfc-e00dd49102e6"
+LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
@@ -136,6 +144,7 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 [compat]
 Gridap = "~0.17.7"
 GridapODEs = "~0.8.0"
+LineSearches = "~7.1.1"
 Plots = "~1.25.3"
 RecipesBase = "~1.2.1"
 """
@@ -1500,7 +1509,8 @@ version = "0.9.1+5"
 # ╠═3879fd7c-cdec-426e-9d7d-1816fbfc707a
 # ╠═4ee586f2-7bf9-421d-96d6-3d7a715dcf71
 # ╠═e8663da4-0c03-49eb-bd7d-494ca8a33b42
-# ╠═862513ce-9003-47bd-aa3d-df9a5742f0ae
+# ╠═4bd0b0ba-c561-46c2-ac82-32cb70db00d9
+# ╠═f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
 # ╠═6b449cc3-4c97-47b1-9b44-d5bc564fc622
 # ╠═f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
 # ╠═5c082833-ba90-4062-8a26-9e819e348f30
@@ -1510,7 +1520,8 @@ version = "0.9.1+5"
 # ╠═749fcaab-42ed-4e5d-a6b6-fac4c4348740
 # ╠═37375a1b-c555-4645-9e68-b24bbb077179
 # ╠═cb60a73d-f7b8-40bf-841c-9717ae8e1ce2
-# ╠═9587a578-44ff-4ca3-9f99-998ebbe00733
+# ╠═b7457c20-23f7-4dff-936e-b083af5ed224
+# ╠═68efb930-c224-49ad-a2e2-07ee8aa7ae7c
 # ╠═210f6712-2f42-4e33-a7a6-122dc8eec00c
 # ╠═05658a02-1272-42e8-b9d0-2bdd0956571b
 # ╠═d2910779-b145-470b-b932-f87660c69e83
