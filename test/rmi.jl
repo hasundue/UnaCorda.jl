@@ -2,12 +2,6 @@ using Gridap
 using GridapODEs.ODETools
 using GridapODEs.TransientFETools
 
-Ks = 1.0
-m = 0.5
-α = 1/2 + 1/m
-θs = 0.5
-θr = 0.1
-
 u(x,t) = θs
 u(t) = x -> u(x,t)
 f(t) = x -> ∂t(u)(x,t) - D(u(t,x))*Δ(u(t))(x)
