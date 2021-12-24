@@ -47,16 +47,15 @@ cells = (N,)
 model = CartesianDiscreteModel(domain, cells)
 
 # ╔═╡ 6a22693a-cb4c-4c77-8d07-9992c9ff7b8f
-order = 1
+order = 3
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
                 ReferenceFE(lagrangian, Float64, order),
-                conformity=:H1,
-                dirichlet_tags=1)
+                conformity=:L2)
 
 # ╔═╡ 5fd05359-cc7a-4f38-8eaf-b42eff330400
-U = TransientTrialFESpace(V, u)
+U = TransientTrialFESpace(V)
 
 # ╔═╡ 3879fd7c-cdec-426e-9d7d-1816fbfc707a
 degree = 2 * order
@@ -86,10 +85,10 @@ dΛ = Measure(Λ,degree)
 ns = get_normal_vector(Λ)
 
 # ╔═╡ f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
-kr(u) = u^3
+kr(u) = 1
 
 # ╔═╡ 941f12aa-c73c-4d7c-9309-4f90b1b7f624
-p(u) = u
+p(u) = 1
 
 # ╔═╡ f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
 a(u,v) = ∫(∇(v)⊙((kr∘u)*((p∘u)*∇(u))))dΩ
@@ -116,10 +115,10 @@ b_Γ(v,t) = ∫( (γ/h)*v*u(t) - (∇(v)⋅nb)*u(t) )dΓ
 a_Λ(u,v) = ∫( (γ/h)*jump(v*ns)⊙jump(u*ns) - jump(v*ns)⊙mean((kr∘u)*(p∘u)*∇(u)) - mean((kr∘v)*(p∘v)*∇(v))⊙jump(u*ns) )dΛ
 
 # ╔═╡ f891d609-2ac4-4a2d-9e0c-dcb4dae8fe8b
-res(t,u,v) = a(u,v) + m(∂t(u),v) - b(v,t)
+res(t,u,v) = a(u,v) + m(∂t(u),v) + a_Γ(u,v) + a_Λ(u,v) - b(v,t) - b_Γ(v,t)
 
 # ╔═╡ 5c082833-ba90-4062-8a26-9e819e348f30
-jac(t,u,du,v) = a(du,v)
+jac(t,u,du,v) = a(du,v) + a_Γ(du,v) + a_Λ(du,v)
 
 # ╔═╡ 2d6acb8e-59f3-4ac1-8018-bdd4c62f1d4c
 jac_t(t,u,dut,v) = m(dut,v)
@@ -128,7 +127,7 @@ jac_t(t,u,dut,v) = m(dut,v)
 op = TransientFEOperator(res, jac, jac_t, U, V)
 
 # ╔═╡ 8a3754ef-86fc-4c8d-9080-8aae46407f18
-t₀, t_end, δt = 0.0, 0.3, 0.1
+t₀, t_end, δt = 0.0, 0.2, 0.1
 
 # ╔═╡ 749fcaab-42ed-4e5d-a6b6-fac4c4348740
 u₀(x) = 0.0
@@ -143,7 +142,7 @@ uh₀ = interpolate_everywhere(u₀, U₀)
 nls = NLSolver(method=:newton, linesearch=BackTracking())
 
 # ╔═╡ 210f6712-2f42-4e33-a7a6-122dc8eec00c
-θ = 0.8
+θ = 1.0
 
 # ╔═╡ 05658a02-1272-42e8-b9d0-2bdd0956571b
 ode_solver = ThetaMethod(nls, δt, θ)
@@ -153,18 +152,19 @@ sol_t = solve(ode_solver, op, uh₀, t₀, t_end)
 
 # ╔═╡ 89face64-1b9e-4e73-b1ff-aec682de8b69
 @recipe function plot(Ω::Triangulation, sol_t::TransientFESolution)
-    x = [ coord[1] for coord in Ω.model.grid.node_coords ]
-    N = length(x) - 1
+    coords = [ coord[1] for coord in Ω.model.grid.node_coords ]
+    N = length(coords) - 1
+    x = sort(vcat(coords, coords))[2:end-1]
     @series begin
-        label --> "t = 0.0"
+        label --> "t = 0.00"
         xlims --> x[1], x[end]
-        y = vcat([0.0], sol_t.odesol.u0[1:N])
+        y = [ sol_t.odesol.u0[i] for i in 1:4N if mod(i,4) in 1:2 ]
         x, y
     end
     for (uh_tn, tn) in sol_t
         @series begin
-            label --> @sprintf "t = %1.1f" tn
-            y = vcat([1.0], uh_tn.free_values[1:N])
+            label --> @sprintf "t = %1.2f" tn
+            y = [ uh_tn.free_values[i] for i in 1:4N if mod(i,4) in 1:2 ]
             x, y
         end
     end
