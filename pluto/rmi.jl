@@ -47,7 +47,7 @@ cells = (N,)
 model = CartesianDiscreteModel(domain, cells)
 
 # ╔═╡ 6a22693a-cb4c-4c77-8d07-9992c9ff7b8f
-order = 1
+order = 3
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
@@ -85,10 +85,10 @@ dΛ = Measure(Λ,degree)
 ns = get_normal_vector(Λ)
 
 # ╔═╡ f0c50585-c03a-4ab1-a41f-026dc3f0f4d5
-kr(u) = 1.0
+kr(u) = 1
 
 # ╔═╡ 941f12aa-c73c-4d7c-9309-4f90b1b7f624
-p(u) = 1.0
+p(u) = 1
 
 # ╔═╡ f3fbc9a7-b405-4d95-a59c-17d9c8f494d0
 a(u,v) = ∫(∇(v)⊙((kr∘u)*((p∘u)*∇(u))))dΩ
@@ -127,7 +127,7 @@ jac_t(t,u,dut,v) = m(dut,v)
 op = TransientFEOperator(res, jac, jac_t, U, V)
 
 # ╔═╡ 8a3754ef-86fc-4c8d-9080-8aae46407f18
-t₀, t₁, δt = 0.0, 1.0, 0.1
+t₀, t_end, δt = 0.0, 0.2, 0.1
 
 # ╔═╡ 749fcaab-42ed-4e5d-a6b6-fac4c4348740
 u₀(x) = 0.0
@@ -142,34 +142,36 @@ uh₀ = interpolate_everywhere(u₀, U₀)
 nls = NLSolver(method=:newton, linesearch=BackTracking())
 
 # ╔═╡ 210f6712-2f42-4e33-a7a6-122dc8eec00c
-θ = 0.9
+θ = 1.0
 
 # ╔═╡ 05658a02-1272-42e8-b9d0-2bdd0956571b
 ode_solver = ThetaMethod(nls, δt, θ)
 
 # ╔═╡ d2910779-b145-470b-b932-f87660c69e83
-sol_t = solve(ode_solver, op, uh₀, t₀, t₁)
+sol_t = solve(ode_solver, op, uh₀, t₀, t_end)
 
 # ╔═╡ 89face64-1b9e-4e73-b1ff-aec682de8b69
 @recipe function plot(Ω::Triangulation, sol_t::TransientFESolution)
     coords = [ coord[1] for coord in Ω.model.grid.node_coords ]
+    N = length(coords) - 1
     x = sort(vcat(coords, coords))[2:end-1]
     @series begin
-        label --> "t = 0.0"
-        y = sol_t.odesol.u0
+        label --> "t = 0.00"
+        xlims --> x[1], x[end]
+        y = [ sol_t.odesol.u0[i] for i in 1:4N if mod(i,4) in 1:2 ]
         x, y
     end
     for (uh_tn, tn) in sol_t
         @series begin
-            label --> @sprintf "t = %1.1f" tn
-            y = uh_tn.free_values
+            label --> @sprintf "t = %1.2f" tn
+            y = [ uh_tn.free_values[i] for i in 1:4N if mod(i,4) in 1:2 ]
             x, y
         end
     end
 end
 
 # ╔═╡ fe3298e9-52b3-4817-873d-dc277ffd6b6f
-plot(Ω, sol_t, xlims=(0,1))
+plot(Ω, sol_t)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -177,7 +179,6 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
 GridapODEs = "55e38337-5b6e-4c7c-9cfc-e00dd49102e6"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
