@@ -70,7 +70,7 @@ dΩ = Measure(Ω, degree)
 Γ = BoundaryTriangulation(model, tags=1)
 
 # ╔═╡ 7dab1642-035c-4019-94d4-8bc83e342e74
-dΓ = Measure(Γ,degree)
+dΓ = Measure(Γ, degree)
 
 # ╔═╡ b6b761f8-2afd-4634-ac44-b9b1a01007fa
 nb = get_normal_vector(Γ)
@@ -79,7 +79,7 @@ nb = get_normal_vector(Γ)
 Λ = SkeletonTriangulation(model)
 
 # ╔═╡ 37e03d72-4fbb-4e3a-bb67-aa9d659419f4
-dΛ = Measure(Λ,degree)
+dΛ = Measure(Λ, degree)
 
 # ╔═╡ 4b5ed293-a3de-4537-ac86-c74f583e0a82
 ns = get_normal_vector(Λ)
