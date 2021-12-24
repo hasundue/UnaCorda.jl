@@ -47,7 +47,7 @@ cells = (N,)
 model = CartesianDiscreteModel(domain, cells)
 
 # ╔═╡ 6a22693a-cb4c-4c77-8d07-9992c9ff7b8f
-order = 3
+order = 1
 
 # ╔═╡ 43654980-8897-4e62-9936-88d33d1c4c7e
 V = TestFESpace(model,
@@ -155,16 +155,16 @@ sol_t = solve(ode_solver, op, uh₀, t₀, t_end)
     coords = [ coord[1] for coord in Ω.model.grid.node_coords ]
     N = length(coords) - 1
     x = sort(vcat(coords, coords))[2:end-1]
+    y0 = [ sol_t.odesol.u0[i] for i in 1:2N ]
     @series begin
         label --> "t = 0.00"
         xlims --> x[1], x[end]
-        y = [ sol_t.odesol.u0[i] for i in 1:4N if mod(i,4) in 1:2 ]
-        x, y
+        x, y0
     end
     for (uh_tn, tn) in sol_t
+        y = [ uh_tn.free_values[i] for i in 1:2N ]
         @series begin
             label --> @sprintf "t = %1.2f" tn
-            y = [ uh_tn.free_values[i] for i in 1:4N if mod(i,4) in 1:2 ]
             x, y
         end
     end
